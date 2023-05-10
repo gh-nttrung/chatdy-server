@@ -1,5 +1,5 @@
 import { Response } from "express";
-import { Error, ErrorDetail, ResBody } from "../interfaces/common.interface";
+import { Error, ErrorDetail, ResBody } from "../common/commonModel";
 
 export const succeed = (res: Response, message?: string, data?: any) => {
   const resBody: ResBody = {

@@ -13,7 +13,7 @@ import {
   AppRequest,
   AuthData,
   ErrorDetail,
-} from "../interfaces/common.interface";
+} from "../common/commonModel";
 
 export interface LoginInput {
   user_name: string;

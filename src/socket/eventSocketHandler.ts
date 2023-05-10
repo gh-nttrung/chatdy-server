@@ -1,6 +1,6 @@
 import { Server, Socket } from "socket.io";
-import { Message } from "../interfaces/message.interface";
-import { Chat } from "../interfaces/chat.interface";
+import { Message } from "../models/message.model";
+import { Chat } from "../models/chat.model";
 
 export default function handlerEventSocket(io: Server, socket: Socket) {
   //

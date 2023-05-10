@@ -9,8 +9,8 @@ router.get("/api", (_, res: Response) => {
   return succeed(res, "Hello World!");
 });
 
-router.use(authRoutes);
-router.use(userRoutes);
+router.use("/api", authRoutes);
+router.use("/api", userRoutes);
 
 export default router;
 
