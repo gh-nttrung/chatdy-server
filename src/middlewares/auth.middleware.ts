@@ -1,12 +1,14 @@
 import { Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
-import { AppRequest, AuthData } from "../interfaces/common.interface";
+import { AppRequest, AuthData } from "../common/commonModel";
 import { authenticationError, serverError } from "../utils/respone.util";
-import { publicPaths } from "../routes";
+
+const publicPaths: string[] = ["/api", "/api/auth/login", "/api/user/register"];
 
 const authMiddleware = (req: AppRequest, res: Response, next: NextFunction) => {
   try {
+    console.log("start authmiddleware")
     // Skip authentication middleware for public paths
     if (publicPaths.includes(req.path)) {
       return next();
@@ -29,7 +31,7 @@ const authMiddleware = (req: AppRequest, res: Response, next: NextFunction) => {
       // Attach the decoded user object to the request object
       const authData = decoded as AuthData;
       req.authData = authData;
-
+      console.log("pass authmiddleware")
       next();
     });
   } catch {

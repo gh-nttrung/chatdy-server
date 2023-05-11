@@ -1,5 +1,4 @@
-import { Request, Response } from "express";
-import jwt from "jsonwebtoken";
+import { Response } from "express";
 
 import {
   createUser,
@@ -95,15 +94,13 @@ export const handleGetUsers = async (req: AppRequest, res: Response) => {
 
 // handle get users by user name
 export const handleGetUserByUsername = async (
-  req: Request,
+  req: AppRequest,
   res: Response
 ) => {
   try {
-    const userName = req.params.user_name;
-    console.log(userName);
+    const userName = req.query.user_name;
+    const user = await getUserByUserName(`${userName}`);
 
-    const user = await getUserByUserName(userName);
-    console.log(user); 
     if (!user) {
       return badRequest(res, "Couldn't find any user");
     }
@@ -118,8 +115,8 @@ export const handleGetUserByUsername = async (
 // handle get users by user name
 export const handleGetUserByEmail = async (req: AppRequest, res: Response) => {
   try {
-    const userName = req.params.user_name;
-    const user = await getUserByUserName(userName);
+    const email = req.query.email;
+    const user = await getUserByEmail(`${email}`);
 
     if (!user) {
       return badRequest(res, "Couldn't find any user");

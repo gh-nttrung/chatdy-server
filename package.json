@@ -27,7 +27,6 @@
     "@types/socket.io": "^3.0.2",
     "bcrypt": "^5.1.0",
     "cors": "^2.8.5",
-    "express-validator": "^6.15.0",
     "jsonwebtoken": "^9.0.0",
     "socket.io": "^4.6.1"
   }

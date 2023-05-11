@@ -3,13 +3,17 @@ import http from "http";
 import cors from "cors";
 import { config } from "dotenv";
 import { ConnectOptions, connect, set } from "mongoose";
+import bodyParser from "body-parser";
 
 import setupSocket from "./socket/setupSocket";
 import router from "./routes";
+import authMiddleware from "./middlewares/auth.middleware";
 
 try {
   config();
   const app = express();
+  app.use(bodyParser.urlencoded({ extended: false }));
+  app.use(bodyParser.json());
   app.use(cors());
 
   //Mongoose
@@ -19,7 +23,7 @@ try {
   console.info("Successfully connected to MongoDB.");
 
   //Router
-  app.use(router);
+  app.use(authMiddleware, router);
 
   //Socket
   const server = http.createServer(app);

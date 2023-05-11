@@ -1,7 +1,6 @@
 import { Response } from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
-import { validationResult } from "express-validator";
 import { getUserByUserName } from "../services/user.service";
 import {
   authenticationError,
@@ -30,18 +29,11 @@ export const login = async (req: AppRequest, res: Response) => {
     const reqBody: LoginInput = req.body;
 
     // Validation
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      var erorrDetails: ErrorDetail[] = [];
-      errors.array().map((error) => {
-        erorrDetails.push({ param: error.param, message: error.msg });
-      });
-      return validationError(res, "Invalid input", erorrDetails);
-    }
-
+    // ...
+    
     // Find the user with the provided email address or user name
     const user = await getUserByUserName(reqBody.user_name);
-
+    
     // If the user is not found, return an error
     if (!user) {
       return authenticationError(res, "Invalid authentication credentials");

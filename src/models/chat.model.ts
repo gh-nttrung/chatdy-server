@@ -10,6 +10,7 @@ export interface Chat {
 }
 
 const ChatSchema = new Schema({
+  title: { type: String, default: "" },
   participants: [{ type: Types.ObjectId, ref: "User" }],
   created_user_id: { type: Types.ObjectId, ref: "User", required: true },
   created_at: { type: Date, default: Date.now },

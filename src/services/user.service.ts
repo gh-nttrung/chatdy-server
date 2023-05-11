@@ -1,5 +1,6 @@
 import bcrypt from "bcrypt";
 import { User, UserModel } from "../models/user.model";
+import mongoose from "mongoose";
 
 export async function createUser(user: User): Promise<User> {
   try {
@@ -23,8 +24,11 @@ export async function getManyUser(): Promise<User[]> {
 
 export async function getUserById(user_id: string): Promise<User | null> {
   try {
-    const user = await UserModel.findById(user_id);
-    return user;
+    if (mongoose.Types.ObjectId.isValid(user_id)) {
+      const user = await UserModel.findById(user_id);
+      return user;
+    }
+    return null;
   } catch (error) {
     throw error;
   }
@@ -34,6 +38,7 @@ export async function getUserByUserName(
   userName: string
 ): Promise<User | null> {
   try {
+    console.log(userName);
     const user = await UserModel.findOne({ user_name: userName });
     return user;
   } catch (error) {
@@ -55,8 +60,11 @@ export async function updateUser(
   user: User
 ): Promise<User | null> {
   try {
-    const updatedUser = await UserModel.findByIdAndUpdate(user_id, user);
-    return updatedUser;
+    if (mongoose.Types.ObjectId.isValid(user_id)) {
+      const updatedUser = await UserModel.findByIdAndUpdate(user_id, user);
+      return updatedUser;
+    }
+    return null;
   } catch (error) {
     throw error;
   }
@@ -64,8 +72,11 @@ export async function updateUser(
 
 export async function deleteUser(user_id: string): Promise<User | null> {
   try {
-    const deletedUser = await UserModel.findByIdAndDelete(user_id);
-    return deletedUser;
+    if (mongoose.Types.ObjectId.isValid(user_id)) {
+      const deletedUser = await UserModel.findByIdAndDelete(user_id);
+      return deletedUser;
+    }
+    return null;
   } catch (error) {
     throw error;
   }
