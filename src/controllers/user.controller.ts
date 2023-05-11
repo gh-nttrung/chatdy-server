@@ -1,60 +1,53 @@
 import { Response } from "express";
+import bcrypt from "bcrypt";
 
-import {
-  createUser,
-  getManyUser,
-  getUserByEmail,
-  getUserById,
-  getUserByUserName,
-} from "../services/user.service";
-import { badRequest, fail, serverError, succeed } from "../utils/respone.util";
-import { User } from "../models/user.model";
+import { badRequest, serverError, succeed } from "../utils/respone.util";
+import { User, UserModel } from "../models/user.model";
 import { AppRequest } from "../common/commonModel";
+import { Types } from "mongoose";
 
-export interface UserInput {
-  user_name: string;
-  password: string;
-  email: string;
-  first_name: string;
-  last_name: string;
-  profile_picture: string | null;
+// function hash password
+async function hashPassword(password: string): Promise<string> {
+  try {
+    const saltRounds = 10;
+    const salt = await bcrypt.genSalt(saltRounds);
+    return bcrypt.hash(password, salt);
+  } catch (error) {
+    throw error;
+  }
 }
 
 // handle register function
-export const handleRegisterUser = async (req: AppRequest, res: Response) => {
+export const handleCreateUser = async (req: AppRequest, res: Response) => {
   try {
-    const reqBody: UserInput = req.body;
+    const user: User = req.body;
 
     //Validate
     //
 
-    // Check if user already exists
-    const usernameExist = await getUserByUserName(reqBody.user_name);
-    const emailExist = await getUserByEmail(reqBody.email);
-    if (usernameExist || emailExist) {
-      return badRequest(res, "Email or username already used");
+    const userExist = await UserModel.findOne({
+      $or: [{ user_name: user.user_name }, { email: user.email }],
+    });
+
+    if (userExist) {
+      return badRequest(res, "User already exists");
     }
 
-    const user = {
-      user_name: reqBody.user_name,
-      password: reqBody.password,
-      email: reqBody.email,
-      first_name: reqBody.first_name,
-      last_name: reqBody.last_name,
-      profile_picture: reqBody.profile_picture,
-    } as User;
+    // Hash password
+    const hashedPassword = await hashPassword(`${user.password}`);
 
     // Save user document
-    var newUser = await createUser(user);
+    const newUser = new UserModel({ ...user, password: hashedPassword });
+    const result = await newUser.save();
 
-    if (newUser) {
+    if (result) {
       // Return the user and access token in the response
       return succeed(res, "User created successfully");
-    } else {
-      return fail(res, 503, "Service Unavailable");
     }
+
+    return badRequest(res, "Created failure");
   } catch {
-    return serverError(res, "Internal server error");
+    return serverError(res, "A system error has occurred");
   }
 };
 
@@ -63,23 +56,27 @@ export const handleGetUserById = async (req: AppRequest, res: Response) => {
   try {
     const user_id = req.params.id;
 
-    const user = await getUserById(user_id);
-
-    if (!user) {
-      return badRequest(res, "Couldn't find any user");
+    if (Types.ObjectId.isValid(user_id)) {
+      const user = await UserModel.findById(user_id);
+      
+      if (!user) {
+        return badRequest(res, "Couldn't find any user");
+      }
+  
+      // Return the users
+      return succeed(res, undefined, user);
     }
 
-    // Return the users
-    return succeed(res, undefined, user);
+    return badRequest(res, "Couldn't find any user");
   } catch {
-    return serverError(res, "Internal server error");
+    return serverError(res, "A system error has occurred");
   }
 };
 
 // handle get all users
-export const handleGetUsers = async (req: AppRequest, res: Response) => {
+export const handleGetAllUsers = async (req: AppRequest, res: Response) => {
   try {
-    const users = await getManyUser();
+    const users = await UserModel.find();
 
     if (!users || users.length == 0) {
       return badRequest(res, "Couldn't find any user");
@@ -88,19 +85,20 @@ export const handleGetUsers = async (req: AppRequest, res: Response) => {
     // Return the users
     return succeed(res, undefined, users);
   } catch {
-    return serverError(res, "Internal server error");
+    return serverError(res, "A system error has occurred");
   }
 };
 
-// handle get users by user name
+// handle get user by user_name
 export const handleGetUserByUsername = async (
   req: AppRequest,
   res: Response
 ) => {
   try {
-    const userName = req.query.user_name;
-    const user = await getUserByUserName(`${userName}`);
+    const user_name = req.params.user_name;
 
+    const user = await UserModel.findOne({user_name: user_name});
+    
     if (!user) {
       return badRequest(res, "Couldn't find any user");
     }
@@ -108,16 +106,17 @@ export const handleGetUserByUsername = async (
     // Return the users
     return succeed(res, undefined, user);
   } catch {
-    return serverError(res, "Internal server error");
+    return serverError(res, "A system error has occurred");
   }
 };
 
-// handle get users by user name
+// handle get users by email
 export const handleGetUserByEmail = async (req: AppRequest, res: Response) => {
   try {
-    const email = req.query.email;
-    const user = await getUserByEmail(`${email}`);
+    const email = req.params.email;
 
+    const user = await UserModel.findOne({email: email});
+    
     if (!user) {
       return badRequest(res, "Couldn't find any user");
     }
@@ -125,6 +124,59 @@ export const handleGetUserByEmail = async (req: AppRequest, res: Response) => {
     // Return the users
     return succeed(res, undefined, user);
   } catch {
-    return serverError(res, "Internal server error");
+    return serverError(res, "A system error has occurred");
   }
 };
+
+// handle update user
+export const handleUpdateUser = async (req: AppRequest, res: Response) => {
+  try {
+    const user_id = req.params.id;
+    const user: User = req.body;
+
+    //update password
+    if(user.password && user.password !== ""){
+      user.password = `${await hashPassword(user.password)}`;
+    }
+    //update date
+    user.updated_at = new Date()
+
+    if (Types.ObjectId.isValid(user_id)) {
+      const updatedUser = await UserModel.findByIdAndUpdate(user_id, user);
+
+      if (!updatedUser) {
+        return badRequest(res, "Couldn't find any user");
+      }
+
+      // Return success result
+      return succeed(res, `User ${user_id} has updated`, undefined);
+    }
+    return badRequest(res, "Updated failed");
+  } catch {
+    return serverError(res, "A system error has occurred");
+  }
+};
+
+// handle delete chat
+export const handleDeleteUser = async (req: AppRequest, res: Response) => {
+  try {
+    const user_id = req.params.id;
+
+    if (Types.ObjectId.isValid(user_id)) {
+      const deletedUser = await UserModel.findByIdAndDelete(user_id);
+
+      if (!deletedUser) {
+        return badRequest(res, "Couldn't find any user");
+      }
+
+      // Return the chats
+      return succeed(res, `User ${user_id} has deleted`, undefined);
+    }
+
+    return badRequest(res, "Couldn't find any user");
+  } catch {
+    return serverError(res, "A system error has occurred");
+  }
+};
+
+// handle get chats of user

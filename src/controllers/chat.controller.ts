@@ -1,56 +1,81 @@
 import { Response } from "express";
-import { badRequest, fail, serverError, succeed } from "../utils/respone.util";
-import { AppRequest } from "../common/commonModel";
 import {
-  deleteChat,
-  getChatById,
-  getChats,
-  getManyChat,
-  insertChat,
-} from "../services/chat.service";
-import { Chat } from "../models/chat.model";
-
-export interface ChatInput {
-  participants: string[];
-  title: string;
-}
+  authenticationError,
+  badRequest,
+  serverError,
+  succeed,
+} from "../utils/respone.util";
+import { AppRequest } from "../common/commonModel";
+import ChatModel, { Chat } from "../models/chat.model";
+import { Types } from "mongoose";
+import { UserModel } from "../models/user.model";
 
 // create chat function
-export const createChat = async (req: AppRequest, res: Response) => {
+export const handleCreateChat = async (req: AppRequest, res: Response) => {
   try {
-    const reqBody: ChatInput = req.body;
-    const user_id = req.authData?.user_id;
+    const chat: Chat = req.body;
 
     //Validate
     //
 
-    // Check if chat already exists
-    const chatsExist = await getChats(reqBody.participants);
-    if (chatsExist && chatsExist.length > 0) {
-      return badRequest(res, "Chat existed");
-    }
-
+    // get user_id to set for create_user
+    const user_id = req.authData?.user_id;
     if (!user_id) {
+      return authenticationError(res, "Authorization failed");
+    }
+    chat.created_user_id = user_id;
+
+    // Check members
+    if (chat.participants) {
+      if (!chat.participants.includes(user_id)) {
+        chat.participants.push(user_id);
+      }
+
+      if (chat.participants.length < 2) {
+        return badRequest(res, "No receiver");
+      }
+    } else {
       return badRequest(res, "Bad request");
     }
 
-    const chat = {
-      title: "",
-      participants: reqBody.participants,
-      created_user_id: user_id,
-    } as Chat;
+    for (let i = 0; i < chat.participants.length; i++) {
+      if (!Types.ObjectId.isValid(chat.participants[i])) {
+        return badRequest(
+          res,
+          "There exists at least one incorrect participant"
+        );
+      } else {
+        const result = UserModel.findById(chat.participants[i]);
+        if (!result) {
+          return badRequest(
+            res,
+            "There exists at least one incorrect participant"
+          );
+        }
+      }
+    }
+
+    // Check if chat already exists
+    const chatsExist = await ChatModel.find({
+      participants: { $all: chat.participants },
+    });
+
+    if (chatsExist && chatsExist.length > 0) {
+      return badRequest(res, "Chat already exists");
+    }
 
     // Save chat document
-    var newChat = await insertChat(chat);
+    const newChat = new ChatModel(chat);
+    const result = await newChat.save();
 
-    if (newChat) {
-      // Return the chat and access token in the response
-      return succeed(res, "Chat created successfully");
-    } else {
-      return fail(res, 503, "Service Unavailable");
+    if (result) {
+      return succeed(res, "Created successfully");
     }
-  } catch {
-    return serverError(res, "Internal server error");
+
+    return badRequest(res, "Created failure");
+  } catch (err) {
+    console.log(err);
+    return serverError(res, "A system error has occurred");
   }
 };
 
@@ -58,24 +83,27 @@ export const createChat = async (req: AppRequest, res: Response) => {
 export const handleGetChatById = async (req: AppRequest, res: Response) => {
   try {
     const chat_id = req.params.id;
+    if (Types.ObjectId.isValid(chat_id)) {
+      const chat = await ChatModel.findById(chat_id);
 
-    const chat = await getChatById(chat_id);
+      if (!chat) {
+        return badRequest(res, "Couldn't find any chat");
+      }
 
-    if (!chat) {
-      return badRequest(res, "Couldn't find any chat");
+      // Return the chats
+      return succeed(res, undefined, chat);
     }
 
-    // Return the chats
-    return succeed(res, undefined, chat);
+    return badRequest(res, "Couldn't find any chat");
   } catch {
-    return serverError(res, "Internal server error");
+    return serverError(res, "A system error has occurred");
   }
 };
 
 // handle get all chats
-export const handleGetChats = async (req: AppRequest, res: Response) => {
+export const handleGetAllChats = async (req: AppRequest, res: Response) => {
   try {
-    const chats = await getManyChat();
+    const chats = await ChatModel.find();
 
     if (!chats || chats.length == 0) {
       return badRequest(res, "Couldn't find any chat");
@@ -84,79 +112,91 @@ export const handleGetChats = async (req: AppRequest, res: Response) => {
     // Return the chats
     return succeed(res, undefined, chats);
   } catch {
-    return serverError(res, "Internal server error");
+    return serverError(res, "A system error has occurred");
   }
 };
 
 // handle update chat
 export const handleUpdateChat = async (req: AppRequest, res: Response) => {
   try {
-
     const chat_id = req.params.id;
-    const chat = await deleteChat(chat_id);
+    const chat: Chat = req.body;
 
-    if (!chat) {
-      return badRequest(res, "Couldn't find any chat");
+    // get user_id
+    const user_id = req.authData?.user_id;
+    if (!user_id) {
+      return authenticationError(res, "Authorization failed");
     }
 
-    // Return the chats
-    return succeed(res, `chat ${chat_id} has deleted`, undefined);
+    // Check members
+    if (chat.participants) {
+      if (!chat.participants.includes(user_id)) {
+        chat.participants.push(user_id);
+      }
+
+      if (chat.participants.length < 2) {
+        return badRequest(res, "No receiver");
+      }
+    } else {
+      return badRequest(res, "Bad request");
+    }
+
+    for (let i = 0; i < chat.participants.length; i++) {
+      if (!Types.ObjectId.isValid(chat.participants[i])) {
+        return badRequest(
+          res,
+          "There exists at least one incorrect participant"
+        );
+      } else {
+        const result = UserModel.findById(chat.participants[i]);
+        if (!result) {
+          return badRequest(
+            res,
+            "There exists at least one incorrect participant"
+          );
+        }
+      }
+    }
+
+    //Update date
+    chat.updated_at = new Date();
+
+    if (Types.ObjectId.isValid(chat_id)) {
+      const updatedChat = await ChatModel.findByIdAndUpdate(chat_id, chat);
+
+      if (!updatedChat) {
+        return badRequest(res, "Couldn't find any chat");
+      }
+
+      // Return success result
+      return succeed(res, `Chat ${chat_id} has updated`, undefined);
+    }
+    return badRequest(res, "Updated failed");
   } catch {
-    return serverError(res, "Internal server error");
+    return serverError(res, "A system error has occurred");
   }
 };
 
 // handle delete chat
 export const handleDeleteChat = async (req: AppRequest, res: Response) => {
   try {
-
     const chat_id = req.params.id;
-    const chat = await deleteChat(chat_id);
 
-    if (!chat) {
-      return badRequest(res, "Couldn't find any chat");
+    if (Types.ObjectId.isValid(chat_id)) {
+      const deletedChat = await ChatModel.findByIdAndDelete(chat_id);
+
+      if (!deletedChat) {
+        return badRequest(res, "Couldn't find any chat");
+      }
+
+      // Return the chats
+      return succeed(res, `Chat ${chat_id} has deleted`, undefined);
     }
 
-    // Return the chats
-    return succeed(res, `chat ${chat_id} has deleted`, undefined);
+    return badRequest(res, "Couldn't find any chat");
   } catch {
-    return serverError(res, "Internal server error");
+    return serverError(res, "A system error has occurred");
   }
 };
 
-// // handle get users by user name
-// export const handleGetUserByUsername = async (
-//   req: AppRequest,
-//   res: Response
-// ) => {
-//   try {
-//     const userName = req.query.user_name;
-//     const user = await getUserByUserName(`${userName}`);
-
-//     if (!user) {
-//       return badRequest(res, "Couldn't find any user");
-//     }
-
-//     // Return the users
-//     return succeed(res, undefined, user);
-//   } catch {
-//     return serverError(res, "Internal server error");
-//   }
-// };
-
-// // handle get users by user name
-// export const handleGetUserByEmail = async (req: AppRequest, res: Response) => {
-//   try {
-//     const email = req.query.email;
-//     const user = await getUserByEmail(`${email}`);
-
-//     if (!user) {
-//       return badRequest(res, "Couldn't find any user");
-//     }
-
-//     // Return the users
-//     return succeed(res, undefined, user);
-//   } catch {
-//     return serverError(res, "Internal server error");
-//   }
-// };
+// handle get messages of chat

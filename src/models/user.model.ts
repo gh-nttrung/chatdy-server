@@ -1,16 +1,16 @@
 import { Schema, model } from "mongoose";
 
 export interface User{
-  _id: string;
-  user_name: string;
-  password: string;
-  email: string;
-  first_name: string;
-  last_name: string;
-  profile_picture: string | null;
-  status: "unconfimred" | "active" | "inactive";
-  created_at: Date;
-  updated_at: Date;
+  _id?: string;
+  user_name?: string;
+  password?: string;
+  email?: string;
+  first_name?: string;
+  last_name?: string;
+  profile_picture?: string | null;
+  status?: string;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 const UserSchema = new Schema({

@@ -1,6 +1,5 @@
 import { Server, Socket } from "socket.io";
 import { Message } from "../models/message.model";
-import { Chat } from "../models/chat.model";
 
 export default function handlerEventSocket(io: Server, socket: Socket) {
   //
@@ -11,7 +10,7 @@ export default function handlerEventSocket(io: Server, socket: Socket) {
 
   //
   const newMessage = (message: Message) => {
-    socket.broadcast.to(message.chat_id).emit("new_message", message);
+    socket.broadcast.to(`${message.chat_id}`).emit("new_message", message);
   };
   socket.on("new_message", newMessage);
 

@@ -1,18 +1,16 @@
 import { Response } from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
-import { getUserByUserName } from "../services/user.service";
 import {
   authenticationError,
   serverError,
   succeed,
-  validationError,
 } from "../utils/respone.util";
 import {
   AppRequest,
   AuthData,
-  ErrorDetail,
 } from "../common/commonModel";
+import { UserModel } from "../models/user.model";
 
 export interface LoginInput {
   user_name: string;
@@ -24,7 +22,7 @@ export interface LoginOutput {
 }
 
 // login function
-export const login = async (req: AppRequest, res: Response) => {
+export const handleLogin = async (req: AppRequest, res: Response) => {
   try {
     const reqBody: LoginInput = req.body;
 
@@ -32,7 +30,7 @@ export const login = async (req: AppRequest, res: Response) => {
     // ...
     
     // Find the user with the provided email address or user name
-    const user = await getUserByUserName(reqBody.user_name);
+    const user = await UserModel.findOne({user_name: reqBody.user_name});
     
     // If the user is not found, return an error
     if (!user) {
@@ -40,7 +38,7 @@ export const login = async (req: AppRequest, res: Response) => {
     }
 
     // Check if the provided password matches the user's stored password
-    const isMatching = comparePasswords(reqBody.password, user.password);
+    const isMatching = comparePasswords(reqBody.password, `${user.password}`);
 
     // If the password is incorrect, return an error
     if (!isMatching) {
@@ -60,7 +58,7 @@ export const login = async (req: AppRequest, res: Response) => {
       token: token,
     } as LoginOutput);
   } catch {
-    return serverError(res, "Internal server error");
+    return serverError(res, "A system error has occurred");
   }
 };
 

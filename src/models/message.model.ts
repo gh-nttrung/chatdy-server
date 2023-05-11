@@ -1,25 +1,18 @@
 import { Schema, model, Types } from "mongoose";
 
 export interface Message{
-  _id: string;
-  chat_id: string;
-  sender_id: string;
-  content: string;
-  message_type: string;
-  created_at: Date;
-  updated_at: Date;
+  _id?: string;
+  chat_id?: string;
+  sender_id?: string;
+  content?: string;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 const MessageSchema = new Schema({
   chat_id: { type: Types.ObjectId, ref: "User", required: true },
   sender_id: { type: Types.ObjectId, ref: "User", required: true },
   content: { type: String, required: true },
-  message_type: {
-    type: String,
-    require: true,
-    enum: ["normal", "system"],
-    default: "system",
-  },
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now },
 });
