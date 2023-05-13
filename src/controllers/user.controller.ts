@@ -5,6 +5,7 @@ import { badRequest, serverError, succeed } from "../utils/respone.util";
 import { User, UserModel } from "../models/user.model";
 import { AppRequest } from "../common/commonModel";
 import { Types } from "mongoose";
+import ChatModel from "../models/chat.model";
 
 // function hash password
 async function hashPassword(password: string): Promise<string> {
@@ -157,7 +158,7 @@ export const handleUpdateUser = async (req: AppRequest, res: Response) => {
   }
 };
 
-// handle delete chat
+// handle delete user
 export const handleDeleteUser = async (req: AppRequest, res: Response) => {
   try {
     const user_id = req.params.id;
@@ -169,7 +170,7 @@ export const handleDeleteUser = async (req: AppRequest, res: Response) => {
         return badRequest(res, "Couldn't find any user");
       }
 
-      // Return the chats
+      // Return
       return succeed(res, `User ${user_id} has deleted`, undefined);
     }
 
@@ -178,5 +179,3 @@ export const handleDeleteUser = async (req: AppRequest, res: Response) => {
     return serverError(res, "A system error has occurred");
   }
 };
-
-// handle get chats of user

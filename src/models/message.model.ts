@@ -9,6 +9,14 @@ export interface Message{
   updated_at?: Date;
 }
 
+export interface MessageItem{
+  id?: string;
+  isMe?: boolean;
+  user_name: string;
+  text?: string;
+  time?: string;
+}
+
 const MessageSchema = new Schema({
   chat_id: { type: Types.ObjectId, ref: "User", required: true },
   sender_id: { type: Types.ObjectId, ref: "User", required: true },

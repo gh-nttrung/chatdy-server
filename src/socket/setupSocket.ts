@@ -15,7 +15,8 @@ export default function setupSocket(server: HTTPServer) {
 
     const serverOptions = {
       cors: {
-        origin: ["https://admin.socket.io", "http://localhost:3000"],
+        // origin: ["http://localhost:5174", "https://admin.socket.io", "http://localhost:3000"],
+        origin: ["https://admin.socket.io"],
         credentials: true,
       },
     };
@@ -26,24 +27,25 @@ export default function setupSocket(server: HTTPServer) {
       mode: "development",
     });
 
-    io.use((socket, next) => {
-      const socketAuth = socket.handshake.auth as SocketAuth;
-      if (socketAuth && socketAuth.token) {
-        const jwtSecretKey = process.env.JWT_SECRET_KEY as string;
+    // io.use((socket, next) => {
+    //   const socketAuth = socket.handshake.auth as SocketAuth;
+    //   if (socketAuth && socketAuth.token) {
+    //     const jwtSecretKey = process.env.JWT_SECRET_KEY as string;
 
-        // Verify the token using the secret key
-        jwt.verify(socketAuth.token, jwtSecretKey, (err, _) => {
-          if (err) {
-            new Error("Error auth!");
-          }
-          next();
-        });
-      } else {
-        next(new Error("Error auth!"));
-      }
-    });
+    //     // Verify the token using the secret key
+    //     jwt.verify(socketAuth.token, jwtSecretKey, (err, _) => {
+    //       if (err) {
+    //         new Error("Error auth!");
+    //       }
+    //       next();
+    //     });
+    //   } else {
+    //     next(new Error("Error auth!"));
+    //   }
+    // });
 
     io.on("connection", (socket: Socket) => {
+      console.log(`User ${socket.id} has joined`)
       handlerEventSocket(io, socket);
     });
 

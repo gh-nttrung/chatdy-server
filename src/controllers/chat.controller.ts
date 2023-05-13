@@ -6,9 +6,10 @@ import {
   succeed,
 } from "../utils/respone.util";
 import { AppRequest } from "../common/commonModel";
-import ChatModel, { Chat } from "../models/chat.model";
+import ChatModel, { Chat, ChatListItem } from "../models/chat.model";
 import { Types } from "mongoose";
 import { UserModel } from "../models/user.model";
+import MessageModel from "../models/message.model";
 
 // create chat function
 export const handleCreateChat = async (req: AppRequest, res: Response) => {
@@ -90,8 +91,28 @@ export const handleGetChatById = async (req: AppRequest, res: Response) => {
         return badRequest(res, "Couldn't find any chat");
       }
 
+      // const lastMsg = await MessageModel.findOne({
+      //   chat_id: chat._id,
+      //   created_at: -1,
+      // });
+      // chat.last_message = lastMsg?.content;
+
+      let title = "";
+      if (chat.participants && chat.participants.length > 0) {
+        for (let i = 0; i < chat.participants.length; i++) {
+          const pid = chat.participants[i];
+          const user = await UserModel.findById(pid);
+          title = `${user?.last_name}, ` + title;
+        }
+      } else {
+        title = `Chat ${chat._id}`;
+      }
+
       // Return the chats
-      return succeed(res, undefined, chat);
+      return succeed(res, undefined, {
+        id: chat_id,
+        title: title.trim().slice(0, -1),
+      } as ChatListItem);
     }
 
     return badRequest(res, "Couldn't find any chat");
@@ -107,6 +128,15 @@ export const handleGetAllChats = async (req: AppRequest, res: Response) => {
 
     if (!chats || chats.length == 0) {
       return badRequest(res, "Couldn't find any chat");
+    }
+
+    for (let i = 0; i < chats.length; i++) {
+      const chat = chats[i];
+      const lastMsg = await MessageModel.findOne({
+        chat_id: chat._id,
+        created_at: -1,
+      });
+      chat.last_message = lastMsg?.content;
     }
 
     // Return the chats
@@ -199,4 +229,182 @@ export const handleDeleteChat = async (req: AppRequest, res: Response) => {
   }
 };
 
-// handle get messages of chat
+// handle search list chat
+export const handleSearchListChats = async (req: AppRequest, res: Response) => {
+  try {
+    const user_id = req.params.user_id;
+    // const max_chat_count = req.params.max_chat_count;
+    // const last = req.params.max_chat_count;
+
+    if (Types.ObjectId.isValid(user_id)) {
+      const chats = await ChatModel.find({ participants: user_id });
+
+      if (!chats) {
+        return badRequest(res, "Couldn't find any chat");
+      }
+
+      for (let i = 0; i < chats.length; i++) {
+        const chat = chats[i];
+
+        // Set title
+        if (!chat.title || chat.title.trim() === "") {
+          let title = "";
+          if (chat.participants && chat.participants.length > 0) {
+            for (let i = 0; i < chat.participants.length; i++) {
+              const pid = chat.participants[i];
+              const user = await UserModel.findById(pid);
+              title = `${user?.last_name}, ` + title;
+            }
+          } else {
+            title = `Chat ${chat._id}`;
+          }
+          chat.title = title;
+        }
+
+        // Set last message
+        const lastMessage = await MessageModel.findOne({
+          chat_id: chat._id,
+          created_at: 1,
+        });
+
+        chat.last_message = lastMessage?.content;
+      }
+
+      // Return chats
+      return succeed(res, undefined, chats);
+    }
+
+    return badRequest(res, "Couldn't find any chat");
+  } catch {
+    return serverError(res, "A system error has occurred");
+  }
+};
+
+export const handleGetChatList = async (req: AppRequest, res: Response) => {
+  try {
+    const user_id = req.params.user_id;
+
+    var result: ChatListItem[] = [];
+
+    if (Types.ObjectId.isValid(user_id)) {
+      const chats = await ChatModel.find({ participants: user_id });
+
+      if (!chats) {
+        return badRequest(res, "Couldn't find any chat");
+      }
+
+      for (let i = 0; i < chats.length; i++) {
+        const chat = chats[i];
+
+        // Set title
+        if (!chat.title || chat.title.trim() === "") {
+          let title = "";
+          if (chat.participants && chat.participants.length > 0) {
+            for (let i = 0; i < chat.participants.length; i++) {
+              const pid = chat.participants[i];
+              const user = await UserModel.findById(pid);
+              title = `${user?.last_name}, ` + title;
+            }
+          } else {
+            title = `Chat ${chat._id}`;
+          }
+          chat.title = title.trim().slice(0, -1);
+        }
+
+        // Set last message
+        const lastMessage = await MessageModel.findOne({
+          chat_id: chat._id,
+          created_at: 1,
+        });
+
+        chat.last_message = lastMessage?.content;
+
+        result.push({
+          id: chat._id,
+          title: chat.title,
+          is_active: false,
+          last_message: lastMessage?.content,
+          last_active_time: lastMessage?.created_at
+            ?.getUTCDate()
+            .toLocaleString(),
+        });
+      }
+
+      // Return chats
+      return succeed(res, undefined, result);
+    }
+
+    return badRequest(res, "Couldn't find any chat");
+  } catch {
+    return serverError(res, "A system error has occurred");
+  }
+};
+
+// Dùng cho trường hợp chat 1-1
+export const handleGetChatDetailByUserNamePartnert = async (
+  req: AppRequest,
+  res: Response
+) => {
+  try {
+    const user_name = req.params.user_name_partnert;
+    const my_id = `${req.authData?.user_id}`;
+
+    const partner = await UserModel.findOne({ user_name: user_name });
+
+    if (partner) {
+      const chat = await ChatModel.findOne({
+        participants: [partner?._id, my_id],
+      });
+
+      if (chat && chat.participants) {
+        let title = "";
+        for (let i = 0; i < chat.participants.length; i++) {
+          const pid = chat.participants[i];
+          const user = await UserModel.findById(pid);
+          title = `${user?.last_name}, ` + title;
+        }
+
+        return succeed(res, undefined, {
+          id: chat._id,
+          title: title.trim().slice(0, -1),
+          is_active: false,
+          last_message: "",
+          last_active_time: "",
+        } as ChatListItem);
+      } else {
+        const newChat = new ChatModel({
+          participants: [my_id, partner.id ],
+          created_user_id: req.authData?.user_id,
+          created_at: new Date(),
+          updated_at: new Date(),
+        });
+
+        const result = await newChat.save();
+
+        if (result && result.participants) {
+          let title = "";
+          for (let i = 0; i < result.participants.length; i++) {
+            const pid = result.participants[i];
+            const user = await UserModel.findById(pid);
+            title = `${user?.last_name}, ` + title;
+          }
+          // Return chat
+          return succeed(res, undefined, {
+            id: result._id,
+            title: title.trim().slice(0, -1),
+            is_active: false,
+            last_message: "",
+            last_active_time: "",
+          } as ChatListItem);
+        }
+      }
+
+      return badRequest(res, "Bad request");
+    }
+
+    return badRequest(res, "Bad request");
+  } catch (err) {
+    console.log(err)
+    return serverError(res, "A system error has occurred");
+  }
+};

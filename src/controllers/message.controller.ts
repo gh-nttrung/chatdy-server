@@ -1,8 +1,14 @@
-import {Response} from "express";
+import { Response } from "express";
 import { AppRequest } from "../common/commonModel";
-import MessageModel, { Message } from "../models/message.model";
-import { authenticationError, badRequest, serverError, succeed } from "../utils/respone.util";
+import MessageModel, { Message, MessageItem } from "../models/message.model";
+import {
+  authenticationError,
+  badRequest,
+  serverError,
+  succeed,
+} from "../utils/respone.util";
 import { Types } from "mongoose";
+import { UserModel } from "../models/user.model";
 
 // create message function
 export const handleCreateMessage = async (req: AppRequest, res: Response) => {
@@ -18,7 +24,7 @@ export const handleCreateMessage = async (req: AppRequest, res: Response) => {
 
     // Set created user
     message.sender_id = user_id;
-    
+
     // Save message document
     const newMessage = new MessageModel(message);
     const result = await newMessage.save();
@@ -26,7 +32,7 @@ export const handleCreateMessage = async (req: AppRequest, res: Response) => {
     if (result) {
       return succeed(res, "Created successfully");
     }
-    
+
     return badRequest(res, "Created failure");
   } catch {
     return serverError(res, "A system error has occurred");
@@ -117,4 +123,40 @@ export const handleDeleteMessage = async (req: AppRequest, res: Response) => {
   }
 };
 
-// handle get messages of message
+// handleGetMessageList
+export const handleGetMessageList = async (req: AppRequest, res: Response) => {
+  try {
+    const chat_id = req.params.chat_id;
+
+    var result: MessageItem[] = [];
+
+    if (Types.ObjectId.isValid(chat_id)) {
+      const messages = await MessageModel.find({ chat_id: chat_id });
+
+      if (!messages) {
+        return badRequest(res, "Couldn't find any message");
+      }
+
+      for (let i = 0; i < messages.length; i++) {
+        const message = messages[i];
+
+        const sender = await UserModel.findById(message.sender_id);
+
+        result.push({
+          id: message._id,
+          user_name: `${sender?.last_name}`,
+          isMe: message.sender_id?.toString() === req.authData?.user_id,
+          text: message.content,
+          time: message.created_at?.toLocaleString(),
+        });
+      }
+
+      // Return chats
+      return succeed(res, undefined, result);
+    }
+
+    return badRequest(res, "Couldn't find any chat");
+  } catch {
+    return serverError(res, "A system error has occurred");
+  }
+};

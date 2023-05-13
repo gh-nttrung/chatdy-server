@@ -5,7 +5,12 @@ import { AppRequest, AuthData } from "../common/commonModel";
 import { authenticationError, serverError } from "../utils/respone.util";
 import { UserModel } from "../models/user.model";
 
-const publicPaths: string[] = ["/api", "/api/auth/login", "/api/user/create"];
+const publicPaths: string[] = [
+  "/api",
+  "/api/auth/login",
+  "/api/auth/verify_token",
+  "/api/user/create",
+];
 
 const authMiddleware = (req: AppRequest, res: Response, next: NextFunction) => {
   try {
@@ -31,7 +36,7 @@ const authMiddleware = (req: AppRequest, res: Response, next: NextFunction) => {
       // Attach the decoded user object to the request object
       const authData = decoded as AuthData;
 
-      const user = await UserModel.findOne({user_name: authData.user_name});
+      const user = await UserModel.findOne({ user_name: authData.user_name });
       if (!user) {
         return authenticationError(res, "Authorization failed");
       }
