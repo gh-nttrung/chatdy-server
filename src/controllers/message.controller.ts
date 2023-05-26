@@ -144,7 +144,7 @@ export const handleGetMessageList = async (req: AppRequest, res: Response) => {
 
         result.push({
           id: message._id,
-          user_name: `${sender?.last_name}`,
+          user_name: `${sender?.first_name} ${sender?.last_name}`,
           isMe: message.sender_id?.toString() === req.authData?.user_id,
           text: message.content,
           time: message.created_at?.toLocaleString(),
