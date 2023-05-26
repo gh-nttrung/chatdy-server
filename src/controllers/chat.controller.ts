@@ -99,11 +99,15 @@ export const handleGetChatById = async (req: AppRequest, res: Response) => {
 
       let title = "";
       if (chat.participants && chat.participants.length > 0) {
-        for (let i = 0; i < chat.participants.length; i++) {
-          const pid = chat.participants[i];
-          const user = await UserModel.findById(pid);
-          title = `${user?.last_name}, ` + title;
-        }
+        let pid = chat.participants.filter(x => x != req.authData?.user_id);
+        const user = await UserModel.findById(pid);
+        title = `${user?.first_name} ${user?.last_name}`;
+
+        // for (let i = 0; i < chat.participants.length; i++) {
+        //   const pid = chat.participants[i];
+        //   const user = await UserModel.findById(pid);
+        //   title = `${user?.last_name}, ` + title;
+        // }
       } else {
         title = `Chat ${chat._id}`;
       }
@@ -111,7 +115,8 @@ export const handleGetChatById = async (req: AppRequest, res: Response) => {
       // Return the chats
       return succeed(res, undefined, {
         id: chat_id,
-        title: title.trim().slice(0, -1),
+        title: title,
+        // title: title.trim().slice(0, -1),
       } as ChatListItem);
     }
 
@@ -250,11 +255,15 @@ export const handleSearchListChats = async (req: AppRequest, res: Response) => {
         if (!chat.title || chat.title.trim() === "") {
           let title = "";
           if (chat.participants && chat.participants.length > 0) {
-            for (let i = 0; i < chat.participants.length; i++) {
-              const pid = chat.participants[i];
-              const user = await UserModel.findById(pid);
-              title = `${user?.last_name}, ` + title;
-            }
+            let pid = chat.participants.filter(x => x != req.authData?.user_id);
+            const user = await UserModel.findById(pid);
+            title = `${user?.first_name} ${user?.last_name}`;
+
+            // for (let i = 0; i < chat.participants.length; i++) {
+            //   const pid = chat.participants[i];
+            //   const user = await UserModel.findById(pid);
+            //   title = `${user?.last_name}, ` + title;
+            // }
           } else {
             title = `Chat ${chat._id}`;
           }
@@ -300,15 +309,21 @@ export const handleGetChatList = async (req: AppRequest, res: Response) => {
         if (!chat.title || chat.title.trim() === "") {
           let title = "";
           if (chat.participants && chat.participants.length > 0) {
-            for (let i = 0; i < chat.participants.length; i++) {
-              const pid = chat.participants[i];
-              const user = await UserModel.findById(pid);
-              title = `${user?.last_name}, ` + title;
-            }
+            
+            let pid = chat.participants.filter(x => x != req.authData?.user_id);
+            const user = await UserModel.findById(pid);
+            title = `${user?.first_name} ${user?.last_name}`;
+
+            // for (let i = 0; i < chat.participants.length; i++) {
+            //   const pid = chat.participants[i];
+            //   const user = await UserModel.findById(pid);
+            //   title = `${user?.last_name}, ` + title;
+            // }
           } else {
             title = `Chat ${chat._id}`;
           }
-          chat.title = title.trim().slice(0, -1);
+          chat.title = title;
+          // chat.title = title.trim().slice(0, -1);
         }
 
         // Set last message
@@ -358,15 +373,21 @@ export const handleGetChatDetailByUserNamePartnert = async (
 
       if (chat && chat.participants) {
         let title = "";
-        for (let i = 0; i < chat.participants.length; i++) {
-          const pid = chat.participants[i];
-          const user = await UserModel.findById(pid);
-          title = `${user?.last_name}, ` + title;
-        }
+
+        let pid = chat.participants.filter(x => x != my_id);
+        const user = await UserModel.findById(pid);
+        title = `${user?.first_name} ${user?.last_name}`;
+
+        // for (let i = 0; i < chat.participants.length; i++) {
+        //   const pid = chat.participants[i];
+        //   const user = await UserModel.findById(pid);
+        //   title = `${user?.last_name}, ` + title;
+        // }
 
         return succeed(res, undefined, {
           id: chat._id,
-          title: title.trim().slice(0, -1),
+          title: title,
+          // title: title.trim().slice(0, -1),
           is_active: false,
           last_message: "",
           last_active_time: "",
@@ -384,14 +405,19 @@ export const handleGetChatDetailByUserNamePartnert = async (
         if (result && result.participants) {
           let title = "";
           for (let i = 0; i < result.participants.length; i++) {
-            const pid = result.participants[i];
+            let pid = result.participants.filter(x => x != my_id);
             const user = await UserModel.findById(pid);
-            title = `${user?.last_name}, ` + title;
+            title = `${user?.first_name} ${user?.last_name}`;
+            
+            // const pid = result.participants[i];
+            // const user = await UserModel.findById(pid);
+            // title = `${user?.last_name}, ` + title;
           }
           // Return chat
           return succeed(res, undefined, {
             id: result._id,
-            title: title.trim().slice(0, -1),
+            title: title,
+            // title: title.trim().slice(0, -1),
             is_active: false,
             last_message: "",
             last_active_time: "",

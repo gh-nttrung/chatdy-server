@@ -15,8 +15,13 @@ export default function setupSocket(server: HTTPServer) {
 
     const serverOptions = {
       cors: {
-        // origin: ["http://localhost:5174", "https://admin.socket.io", "http://localhost:3000"],
-        origin: ["https://admin.socket.io"],
+        origin: [
+          "http://localhost:5173", 
+          "http://localhost:5174", 
+          "https://admin.socket.io", 
+          "http://localhost:3000"
+        ],
+        // origin: ["https://admin.socket.io"],
         credentials: true,
       },
     };
